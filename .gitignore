@@ -1,0 +1,42 @@
+# Local planning and overlays (never publish)
+plans/
+backups/
+local/
+
+# Machine-specific routing (use routing.example.json when added)
+routing/routing.local.json
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editor and tool noise
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Python / test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+*.egg-info/
+.venv/
+venv/
+
+# Generated adapters and local runtime (when produced by render/install)
+adapters/**/generated/
+*.local.md
+*.local.toml
+
+# Temporary and scratch
+tmp/
+*.tmp
+*.log

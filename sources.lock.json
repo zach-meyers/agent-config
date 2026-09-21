@@ -1,0 +1,165 @@
+{
+  "version": 1,
+  "reviewed": "2026-09-21",
+  "licenses": [
+    {
+      "repository": "dotnet/skills",
+      "commit": "9beca0b0be339affea6420c2a2721293f2e9dcdb",
+      "spdx": "MIT",
+      "files": [
+        {
+          "role": "license",
+          "local_path": "licenses/dotnet-skills-9beca0b0-LICENSE",
+          "upstream_path": "LICENSE",
+          "upstream_url": "https://github.com/dotnet/skills/blob/9beca0b0be339affea6420c2a2721293f2e9dcdb/LICENSE",
+          "upstream_blob_sha": "984713a49622a96da110443c15477613bc12656b",
+          "content_sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310"
+        }
+      ]
+    },
+    {
+      "repository": "microsoft/azure-skills",
+      "commit": "50b0f1c0295d8580da49e815d8a1261f860559e6",
+      "spdx": "MIT",
+      "files": [
+        {
+          "role": "license",
+          "local_path": "licenses/microsoft-azure-skills-50b0f1c0-LICENSE",
+          "upstream_path": "LICENSE",
+          "upstream_url": "https://github.com/microsoft/azure-skills/blob/50b0f1c0295d8580da49e815d8a1261f860559e6/LICENSE",
+          "upstream_blob_sha": "356b112bcc4f07e03b6e57569eedf9d79978d2d5",
+          "content_sha256": "8a5d8efb70942e65032f930c761d097feeb41a7517ebd04c9d2e4ec3764071c5"
+        }
+      ]
+    },
+    {
+      "repository": "MicrosoftDocs/Agent-Skills",
+      "commit": "90ec55f3dc95837df8b9f7bd6265fb5935ccdca6",
+      "spdx": "CC-BY-4.0",
+      "files": [
+        {
+          "role": "license",
+          "local_path": "licenses/MicrosoftDocs-Agent-Skills-90ec55f3-LICENSE",
+          "upstream_path": "LICENSE",
+          "upstream_url": "https://github.com/MicrosoftDocs/Agent-Skills/blob/90ec55f3dc95837df8b9f7bd6265fb5935ccdca6/LICENSE",
+          "upstream_blob_sha": "e056e7c3ec54533985dfb3a4c6ef70dab8ca2e42",
+          "content_sha256": "7183ef9749eb9b75e710a81a4c812a9405cc184f087500581a973e5929ac3f5e"
+        },
+        {
+          "role": "license-code",
+          "local_path": "licenses/MicrosoftDocs-Agent-Skills-90ec55f3-LICENSE-CODE",
+          "upstream_path": "LICENSE-CODE",
+          "upstream_url": "https://github.com/MicrosoftDocs/Agent-Skills/blob/90ec55f3dc95837df8b9f7bd6265fb5935ccdca6/LICENSE-CODE",
+          "upstream_blob_sha": "b17b032a43088ac7f3d2f3e34a2431c778a95e6f",
+          "content_sha256": "91f7258203fd43ba6d6f7f72b644eaedee9e3430f035c053beb6f34052f045e2"
+        },
+        {
+          "role": "copyright-notice",
+          "local_path": "licenses/MicrosoftDocs-Agent-Skills-90ec55f3-ThirdPartyNotices.md",
+          "upstream_path": "ThirdPartyNotices.md",
+          "upstream_url": "https://github.com/MicrosoftDocs/Agent-Skills/blob/90ec55f3dc95837df8b9f7bd6265fb5935ccdca6/ThirdPartyNotices.md",
+          "upstream_blob_sha": "ee8155071d7177c82ca5599adb409664ce886c63",
+          "content_sha256": "003243302b1b7e5d932d6b17424a418cd82f88047de46f47d59c07936d24f7bd"
+        }
+      ]
+    }
+  ],
+  "entries": [
+    {
+      "skill": "writing-mstest-tests",
+      "path_in_repo": "skills/writing-mstest-tests",
+      "source": {
+        "repository": "dotnet/skills",
+        "url": "https://github.com/dotnet/skills",
+        "commit": "9beca0b0be339affea6420c2a2721293f2e9dcdb",
+        "tree_url": "https://github.com/dotnet/skills/tree/9beca0b0be339affea6420c2a2721293f2e9dcdb/plugins/dotnet-test/skills/writing-mstest-tests",
+        "upstream_path": "plugins/dotnet-test/skills/writing-mstest-tests"
+      },
+      "license": "MIT",
+      "license_file": "licenses/dotnet-skills-9beca0b0-LICENSE",
+      "content_sha256": "8dc9f67d04accef5dfc48b0d2132d4ca7ef5c634100c23fde3809edc512df42b",
+      "omitted_files": []
+    },
+    {
+      "skill": "test-anti-patterns",
+      "path_in_repo": "skills/test-anti-patterns",
+      "source": {
+        "repository": "dotnet/skills",
+        "url": "https://github.com/dotnet/skills",
+        "commit": "9beca0b0be339affea6420c2a2721293f2e9dcdb",
+        "tree_url": "https://github.com/dotnet/skills/tree/9beca0b0be339affea6420c2a2721293f2e9dcdb/plugins/dotnet-test/skills/test-anti-patterns",
+        "upstream_path": "plugins/dotnet-test/skills/test-anti-patterns"
+      },
+      "license": "MIT",
+      "license_file": "licenses/dotnet-skills-9beca0b0-LICENSE",
+      "content_sha256": "4ddeea9c0a120d3172bbf5aa6f631a5d9a7b3238415387d4195e065ed70a7ac7",
+      "omitted_files": []
+    },
+    {
+      "skill": "analyzing-dotnet-performance",
+      "path_in_repo": "skills/analyzing-dotnet-performance",
+      "source": {
+        "repository": "dotnet/skills",
+        "url": "https://github.com/dotnet/skills",
+        "commit": "9beca0b0be339affea6420c2a2721293f2e9dcdb",
+        "tree_url": "https://github.com/dotnet/skills/tree/9beca0b0be339affea6420c2a2721293f2e9dcdb/plugins/dotnet-diag/skills/analyzing-dotnet-performance",
+        "upstream_path": "plugins/dotnet-diag/skills/analyzing-dotnet-performance"
+      },
+      "license": "MIT",
+      "license_file": "licenses/dotnet-skills-9beca0b0-LICENSE",
+      "content_sha256": "a4e5c6b859d6f87133c65f7ab77b4ba1f211f27d7ad5afee35aa9ec0b25d8b39",
+      "omitted_files": []
+    },
+    {
+      "skill": "azure-diagnostics",
+      "path_in_repo": "skills/azure-diagnostics",
+      "source": {
+        "repository": "microsoft/azure-skills",
+        "url": "https://github.com/microsoft/azure-skills",
+        "commit": "50b0f1c0295d8580da49e815d8a1261f860559e6",
+        "tree_url": "https://github.com/microsoft/azure-skills/tree/50b0f1c0295d8580da49e815d8a1261f860559e6/skills/azure-diagnostics",
+        "upstream_path": "skills/azure-diagnostics"
+      },
+      "license": "MIT",
+      "license_file": "licenses/microsoft-azure-skills-50b0f1c0-LICENSE",
+      "content_sha256": "4495250da1ce2b31c1bb46621d9f4ae82e96becdd1de400453b29db20a68aff6",
+      "omitted_files": [
+        "scripts/aks-baseline.ps1",
+        "scripts/aks-baseline.sh",
+        "scripts/appservice-diagnostics.ps1",
+        "scripts/appservice-diagnostics.sh",
+        "scripts/containerapp-diagnostics.ps1",
+        "scripts/containerapp-diagnostics.sh",
+        "scripts/pod-evidence.ps1",
+        "scripts/pod-evidence.sh",
+        "scripts/run-ig.ps1",
+        "scripts/run-ig.sh",
+        "scripts/test-messaging-connectivity.ps1",
+        "scripts/test-messaging-connectivity.sh"
+      ],
+      "local_additions": [
+        "LOCAL_COMPATIBILITY.md",
+        "SKILL.md (local distribution notice after frontmatter)"
+      ]
+    },
+    {
+      "skill": "azure-well-architected",
+      "path_in_repo": "skills/azure-well-architected",
+      "source": {
+        "repository": "MicrosoftDocs/Agent-Skills",
+        "url": "https://github.com/MicrosoftDocs/Agent-Skills",
+        "commit": "90ec55f3dc95837df8b9f7bd6265fb5935ccdca6",
+        "tree_url": "https://github.com/MicrosoftDocs/Agent-Skills/tree/90ec55f3dc95837df8b9f7bd6265fb5935ccdca6/skills/azure-well-architected",
+        "upstream_path": "skills/azure-well-architected"
+      },
+      "license": "CC-BY-4.0",
+      "license_file": "licenses/MicrosoftDocs-Agent-Skills-90ec55f3-LICENSE",
+      "copyright_notice_files": [
+        "licenses/MicrosoftDocs-Agent-Skills-90ec55f3-ThirdPartyNotices.md",
+        "licenses/MicrosoftDocs-Agent-Skills-90ec55f3-LICENSE-CODE"
+      ],
+      "content_sha256": "daa18cb7983379aeaa301ece2dfd728b200cd8d676c15e17226b9e6ecdeaa66c",
+      "omitted_files": []
+    }
+  ]
+}

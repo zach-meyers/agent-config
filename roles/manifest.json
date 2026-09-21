@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "description": "Portable role definitions. Harness adapters use adapterName; prompt text loads from promptFile.",
+  "roles": [
+    {
+      "id": "architect",
+      "adapterName": "toolkit-architect",
+      "promptFile": "prompts/architect.md",
+      "capabilityTier": "reason-strong",
+      "readOnly": false,
+      "inheritsOrchestratorModel": true
+    },
+    {
+      "id": "researcher",
+      "adapterName": "toolkit-researcher",
+      "promptFile": "prompts/researcher.md",
+      "capabilityTier": "read-cheap",
+      "readOnly": true,
+      "inheritsOrchestratorModel": false
+    },
+    {
+      "id": "implementer",
+      "adapterName": "toolkit-implementer",
+      "promptFile": "prompts/implementer.md",
+      "capabilityTier": "code-fast",
+      "readOnly": false,
+      "inheritsOrchestratorModel": false
+    },
+    {
+      "id": "reviewer",
+      "adapterName": "toolkit-reviewer",
+      "promptFile": "prompts/reviewer.md",
+      "capabilityTier": "review-independent",
+      "readOnly": true,
+      "inheritsOrchestratorModel": false
+    }
+  ]
+}

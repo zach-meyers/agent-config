@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.agent-config/routing.example.json",
+  "title": "Agent toolkit routing",
+  "description": "Abstract capability tiers and per-harness role-to-model mappings. Copy routing.local.json from this file and set harness-specific model IDs.",
+  "type": "object",
+  "required": ["schemaVersion", "capabilityTiers", "harnesses"],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "capabilityTiers": {
+      "type": "object",
+      "description": "Abstract cost/capability classes; doctor validates local model IDs map to these tiers.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["summary"],
+        "properties": {
+          "summary": { "type": "string" },
+          "typicalRoles": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "defaultModel": {
+            "type": "string",
+            "description": "Use inherit to follow the orchestrator or interactive session model."
+          }
+        }
+      }
+    },
+    "harnesses": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["enabled", "roles"],
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "When false, adapters for this harness are not activated."
+          },
+          "roles": {
+            "type": "object",
+            "description": "Keys are manifest adapterName values (toolkit-*).",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["capabilityTier", "model"],
+              "properties": {
+                "capabilityTier": { "type": "string" },
+                "model": {
+                  "type": "string",
+                  "description": "Harness-specific model id, or inherit."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "schemaVersion": 1,
+  "capabilityTiers": {
+    "read-cheap": {
+      "summary": "Fast read-only exploration, search, and summarization.",
+      "typicalRoles": ["toolkit-researcher"],
+      "defaultModel": null
+    },
+    "code-fast": {
+      "summary": "Balanced coding, tests, and mechanical edits within a brief.",
+      "typicalRoles": ["toolkit-implementer"],
+      "defaultModel": null
+    },
+    "reason-strong": {
+      "summary": "Architecture, ambiguous tradeoffs, and integration decisions.",
+      "typicalRoles": ["toolkit-architect"],
+      "defaultModel": "inherit"
+    },
+    "review-independent": {
+      "summary": "Consequential review; prefer a different model family from implementers when available.",
+      "typicalRoles": ["toolkit-reviewer"],
+      "defaultModel": null
+    }
+  },
+  "harnesses": {
+    "cursor": {
+      "enabled": false,
+      "roles": {
+        "toolkit-architect": {
+          "capabilityTier": "reason-strong",
+          "model": "inherit"
+        },
+        "toolkit-researcher": {
+          "capabilityTier": "read-cheap",
+          "model": "<cursor-model-id>"
+        },
+        "toolkit-implementer": {
+          "capabilityTier": "code-fast",
+          "model": "<cursor-model-id>"
+        },
+        "toolkit-reviewer": {
+          "capabilityTier": "review-independent",
+          "model": "<cursor-model-id>"
+        }
+      }
+    },
+    "claude": {
+      "enabled": false,
+      "roles": {
+        "toolkit-architect": {
+          "capabilityTier": "reason-strong",
+          "model": "inherit"
+        },
+        "toolkit-researcher": {
+          "capabilityTier": "read-cheap",
+          "model": "<claude-model-id>"
+        },
+        "toolkit-implementer": {
+          "capabilityTier": "code-fast",
+          "model": "<claude-model-id>"
+        },
+        "toolkit-reviewer": {
+          "capabilityTier": "review-independent",
+          "model": "<claude-model-id>"
+        }
+      }
+    },
+    "codex": {
+      "enabled": false,
+      "roles": {
+        "toolkit-architect": {
+          "capabilityTier": "reason-strong",
+          "model": "inherit"
+        },
+        "toolkit-researcher": {
+          "capabilityTier": "read-cheap",
+          "model": "<codex-model-id>"
+        },
+        "toolkit-implementer": {
+          "capabilityTier": "code-fast",
+          "model": "<codex-model-id>"
+        },
+        "toolkit-reviewer": {
+          "capabilityTier": "review-independent",
+          "model": "<codex-model-id>"
+        }
+      }
+    },
+    "copilot": {
+      "enabled": false,
+      "roles": {
+        "toolkit-architect": {
+          "capabilityTier": "reason-strong",
+          "model": "inherit"
+        },
+        "toolkit-researcher": {
+          "capabilityTier": "read-cheap",
+          "model": "<copilot-model-id>"
+        },
+        "toolkit-implementer": {
+          "capabilityTier": "code-fast",
+          "model": "<copilot-model-id>"
+        },
+        "toolkit-reviewer": {
+          "capabilityTier": "review-independent",
+          "model": "<copilot-model-id>"
+        }
+      }
+    }
+  }
+}
