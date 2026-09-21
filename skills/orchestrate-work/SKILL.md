@@ -20,6 +20,18 @@ Orchestrate when delegation protects main context, enables safe parallelism, or 
 - Map roles through `roles/manifest.json` adapter names; resolve models from `routing/routing.local.json`.
 - **Never** silently substitute an unavailable model—report and escalate or wait for configuration.
 
+### Runtime role fallback
+
+Before spawning, inspect the subagent types exposed by the active harness.
+
+1. Use the role's `toolkit-*` adapter when it is available.
+2. Otherwise read `roles/manifest.json`, select that role's harness fallback, and verify the fallback type is actually exposed.
+3. Prepend `roles/prompts/<role>.md` and the completed worker brief to the fallback's task. The fallback name alone does not carry the portable role contract.
+4. Preserve the role's mutation boundary. A read-only role remains report-only even when its fallback has edit tools.
+5. Preserve cheapest-capable model routing when the harness permits a model override. If it does not, state that limitation rather than claiming cost routing occurred.
+
+Current Cursor fallbacks are `architect → deep-reasoner`, `researcher → explore`, `implementer → fast-worker`, and `reviewer → deep-reasoner`. Use `security-review` only for an explicitly requested security review.
+
 ## Concurrency
 
 | Rule | Detail |

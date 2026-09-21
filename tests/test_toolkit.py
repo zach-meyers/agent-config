@@ -753,6 +753,58 @@ class DoctorTests(ToolkitFixtureTestCase):
         proc = self.run_in_fixture("doctor.py", "--json", env=self.env)
         self.assertNotIn(token, proc.stdout + proc.stderr)
 
+    def test_doctor_roles_manifest_cursor_fallbacks_valid(self) -> None:
+        if tomllib is None:
+            self.skipTest("tomllib requires Python 3.11+")
+        proc = self.run_in_fixture("doctor.py", "--json", env=self.env)
+        data = json.loads(proc.stdout)
+        manifest_failures = [
+            item
+            for item in data.get("failures", [])
+            if "fallback" in item or "prompt missing" in item or "duplicate role" in item
+        ]
+        self.assertEqual(manifest_failures, [], data.get("failures"))
+
+    def test_doctor_fails_missing_cursor_fallback_in_manifest(self) -> None:
+        if tomllib is None:
+            self.skipTest("tomllib requires Python 3.11+")
+        manifest_path = self.agents_root / "roles" / "manifest.json"
+        original = manifest_path.read_text(encoding="utf-8")
+        try:
+            manifest = json.loads(original)
+            manifest["roles"][0].pop("fallbacks", None)
+            manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+            proc = self.run_in_fixture("doctor.py", "--json", env=self.env)
+            data = json.loads(proc.stdout)
+            self.assertFalse(data["ok"])
+            self.assertTrue(
+                any("fallbacks.cursor" in item for item in data.get("failures", [])),
+                data.get("failures"),
+            )
+        finally:
+            manifest_path.write_text(original, encoding="utf-8")
+
+    def test_doctor_fails_cursor_fallback_drift(self) -> None:
+        if tomllib is None:
+            self.skipTest("tomllib requires Python 3.11+")
+        manifest_path = self.agents_root / "roles" / "manifest.json"
+        original = manifest_path.read_text(encoding="utf-8")
+        try:
+            manifest = json.loads(original)
+            for role in manifest["roles"]:
+                if role.get("id") == "researcher":
+                    role["fallbacks"]["cursor"] = "generalPurpose"
+            manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+            proc = self.run_in_fixture("doctor.py", "--json", env=self.env)
+            data = json.loads(proc.stdout)
+            self.assertFalse(data["ok"])
+            self.assertTrue(
+                any("cursor fallback drift" in item and "researcher" in item for item in data.get("failures", [])),
+                data.get("failures"),
+            )
+        finally:
+            manifest_path.write_text(original, encoding="utf-8")
+
     def test_doctor_fails_placeholder_model_when_harness_enabled(self) -> None:
         if tomllib is None:
             self.skipTest("tomllib requires Python 3.11+")

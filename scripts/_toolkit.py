@@ -32,6 +32,13 @@ CLAUDE_MODEL_ALIASES = frozenset({"inherit", "haiku", "sonnet", "opus"})
 
 HARNESS_NAMES = ("cursor", "claude", "codex", "copilot")
 
+CURSOR_ROLE_FALLBACKS: dict[str, str] = {
+    "architect": "deep-reasoner",
+    "researcher": "explore",
+    "implementer": "fast-worker",
+    "reviewer": "deep-reasoner",
+}
+
 CLAUDE_READONLY_TOOLS = "Read, Grep, Glob, WebSearch, WebFetch"
 COPILOT_READONLY_TOOLS = ["read", "search"]
 

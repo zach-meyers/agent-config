@@ -13,6 +13,7 @@ from typing import Any
 
 from _toolkit import (
     CLAUDE_MODEL_ALIASES,
+    CURSOR_ROLE_FALLBACKS,
     HARNESS_NAMES,
     HOOK_EVENTS,
     PLACEHOLDER_MODEL,
@@ -89,6 +90,88 @@ def validate_skills(root: Path, failures: list[str]) -> None:
             continue
         if meta.get("name") != name:
             failures.append(f"skill name mismatch: {name}")
+
+
+def validate_roles_manifest(root: Path, failures: list[str]) -> None:
+    manifest = load_roles_manifest(root)
+    roles = manifest.get("roles", [])
+    if not isinstance(roles, list):
+        failures.append("roles manifest roles must be a list")
+        return
+
+    seen_ids: set[str] = set()
+    seen_adapters: set[str] = set()
+    for role in roles:
+        if not isinstance(role, dict):
+            failures.append("roles manifest entry must be an object")
+            continue
+        role_id = str(role.get("id", "")).strip()
+        adapter = str(role.get("adapterName", "")).strip()
+        if not role_id:
+            failures.append("role missing id")
+            continue
+        if role_id in seen_ids:
+            failures.append(f"duplicate role id: {role_id}")
+        seen_ids.add(role_id)
+        if not adapter:
+            failures.append(f"role missing adapterName: {role_id}")
+            continue
+        if adapter in seen_adapters:
+            failures.append(f"duplicate adapterName: {adapter}")
+        seen_adapters.add(adapter)
+
+        prompt_file = role.get("promptFile")
+        if not isinstance(prompt_file, str) or not prompt_file.strip():
+            failures.append(f"role missing promptFile: {role_id}")
+            continue
+        prompt_path = root / "roles" / prompt_file
+        if not prompt_path.is_file():
+            failures.append(f"role prompt missing: {prompt_file}")
+
+        fallbacks = role.get("fallbacks")
+        cursor_fallback = ""
+        if isinstance(fallbacks, dict):
+            cursor_fallback = str(fallbacks.get("cursor", "")).strip()
+        if not cursor_fallback:
+            failures.append(f"role missing fallbacks.cursor: {role_id}")
+            continue
+
+        expected = CURSOR_ROLE_FALLBACKS.get(role_id)
+        if expected is None:
+            failures.append(f"cursor fallback map missing role id: {role_id}")
+        elif cursor_fallback != expected:
+            failures.append(
+                f"cursor fallback drift: {role_id} -> {cursor_fallback} (expected {expected})"
+            )
+
+    for role_id in CURSOR_ROLE_FALLBACKS:
+        if role_id not in seen_ids:
+            failures.append(f"manifest missing required role id: {role_id}")
+
+
+def validate_orchestration_fallback_contract(root: Path, failures: list[str]) -> None:
+    agents_path = root / "AGENTS.md"
+    if agents_path.is_file():
+        agents_text = agents_path.read_text(encoding="utf-8")
+        if "roles/manifest.json" not in agents_text:
+            failures.append("AGENTS.md must reference roles/manifest.json for runtime fallback")
+        if "fallback" not in agents_text.lower():
+            failures.append("AGENTS.md must document harness runtime fallback delegation")
+
+    skill_path = root / "skills" / "orchestrate-work" / "SKILL.md"
+    if not skill_path.is_file():
+        failures.append("orchestrate-work skill missing for fallback contract")
+        return
+    skill_text = skill_path.read_text(encoding="utf-8")
+    if "roles/manifest.json" not in skill_text:
+        failures.append("orchestrate-work skill must reference roles/manifest.json")
+    if "runtime role fallback" not in skill_text.lower():
+        failures.append("orchestrate-work skill must document runtime role fallback")
+    for role_id, fallback_type in CURSOR_ROLE_FALLBACKS.items():
+        if fallback_type not in skill_text:
+            failures.append(
+                f"orchestrate-work skill missing cursor fallback type for {role_id}: {fallback_type}"
+            )
 
 
 def validate_enabled_model_mappings(routing: dict[str, Any], failures: list[str], warnings: list[str]) -> None:
@@ -513,6 +596,8 @@ def main() -> int:
 
     validate_required_files(root, failures)
     validate_skills(root, failures)
+    validate_roles_manifest(root, failures)
+    validate_orchestration_fallback_contract(root, failures)
     validate_roles_routing(root, failures, warnings)
     validate_enabled_model_mappings(routing, failures, warnings)
     validate_sources_lock(root, failures)

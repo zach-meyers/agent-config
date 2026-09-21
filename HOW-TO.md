@@ -83,7 +83,7 @@ Trigger for nontrivial work: [orchestrate-work](./skills/orchestrate-work/SKILL.
 1. Decompose; default **one** worker, **two–four** only for independent subtasks.
 2. **Disjoint file ownership**; parallel writers → separate worktrees.
 3. Map work to a role (`researcher` / `implementer` / `architect` / `reviewer`) and tier in `routing.local.json`.
-4. **Cursor gap:** spawn an available subagent type (e.g. explore, generalPurpose, fast-worker), not `toolkit-*` Task types. Paste the matching portable prompt from `roles/prompts/<role>.md` and a filled [worker-brief-template.md](./skills/orchestrate-work/worker-brief-template.md).
+4. **Cursor gap:** inspect the Task types currently exposed, then use the fallback in `roles/manifest.json`: `architect → deep-reasoner`, `researcher → explore`, `implementer → fast-worker`, `reviewer → deep-reasoner`. Paste the matching portable prompt from `roles/prompts/<role>.md` and a filled [worker-brief-template.md](./skills/orchestrate-work/worker-brief-template.md). Use `security-review` only when the user explicitly requests that review.
 5. **Claude:** use `~/.claude/agents/toolkit-*.md` symlinks when the product exposes them; same brief either way.
 6. Synthesize worker returns; replay checks; only the lead declares done/blocked.
 
