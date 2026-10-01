@@ -8,6 +8,7 @@
 
 ## Before acting
 - Inspect relevant code, tests, configuration, and version-control state before making claims or edits. Code is authoritative when documentation disagrees.
+- Source-code comments are not authoritative evidence of behavior; verify their claims against executable code, tests, and configuration.
 - Ask only when an unresolved choice materially changes the design, risk, or destructive effect. Otherwise choose a sensible default and proceed.
 - Verify evolving APIs and platform behavior against current, version-matched primary documentation.
 - Preserve user changes. Never use destructive version-control operations, overwrite conflicting files, deploy, publish, or make external writes without authorization.
