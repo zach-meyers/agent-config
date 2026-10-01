@@ -16,6 +16,7 @@
 ## Engineering
 - Make the smallest coherent change that solves the root problem. Avoid speculative abstractions, dependencies, compatibility layers, and adjacent cleanup.
 - Respect the repository's target versions, architecture, naming, formatting, package manager, and test conventions.
+- In C#, default to `var` for local variables whenever the compiler can infer the intended static type, including object creation, method results, LINQ queries, and test locals. Use an explicit local type only when inference is impossible or when intentionally declaring a materially different abstraction than the initializer; never repeat a concrete type merely as documentation.
 - Reproduce defects before fixing them when practical. Test observable behavior with meaningful, distinct assertions; never add placeholder tests.
 - Handle failure paths explicitly. Treat security, privacy, operability, accessibility, performance, and backward compatibility in proportion to risk.
 - Comments explain non-obvious constraints or decisions, not the code itself. Keep architecture and flow documentation synchronized when behavior materially changes.
