@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import shutil
 import subprocess
@@ -31,6 +32,7 @@ from _toolkit import (
     load_routing,
     load_roles_manifest,
     missing_claude_toolkit_hook_groups,
+    parse_codex_features_output,
     parse_skill_frontmatter,
     parse_toml,
     render_manifest_path,
@@ -48,6 +50,20 @@ def _planned_symlinks(root: Path, routing: dict[str, Any]) -> list[dict[str, str
     from install import planned_symlinks
 
     return planned_symlinks(root, routing)
+
+
+def _planned_symlinks_when_enabled(
+    root: Path,
+    routing: dict[str, Any],
+    harness: str,
+) -> list[dict[str, str]]:
+    enabled_routing = copy.deepcopy(routing)
+    enabled_routing.setdefault("harnesses", {}).setdefault(harness, {})["enabled"] = True
+    return [
+        entry
+        for entry in _planned_symlinks(root, enabled_routing)
+        if entry.get("harness") == harness
+    ]
 
 
 def _failures_and_warnings(as_json: bool, failures: list[str], warnings: list[str]) -> int:
@@ -333,14 +349,65 @@ def validate_generated_artifacts(root: Path, failures: list[str]) -> None:
         if claude_agent.is_file() and "Bash" in claude_agent.read_text(encoding="utf-8"):
             failures.append(f"readonly claude agent includes Bash: {role['adapterName']}")
 
+    validate_codex_generated_artifacts(root, failures)
+
+
+def validate_codex_generated_artifacts(root: Path, failures: list[str]) -> None:
+    codex_gen = generated_dir(root, "codex")
+    hooks_path = codex_gen / "hooks.json"
+    if hooks_path.is_file():
+        try:
+            hook_document = load_json(hooks_path)
+        except (json.JSONDecodeError, ValueError):
+            hook_document = {}
+        hooks = hook_document.get("hooks", {}) if isinstance(hook_document, dict) else {}
+        if not isinstance(hooks, dict):
+            failures.append("codex hooks.json hooks must be an object")
+        else:
+            for event, meta in HOOK_EVENTS["codex"].items():
+                groups = hooks.get(event)
+                if not isinstance(groups, list) or not groups:
+                    failures.append(f"codex hook event missing groups: {event}")
+                    continue
+                for group in groups:
+                    if not isinstance(group, dict):
+                        failures.append(f"codex hook group invalid: {event}")
+                        continue
+                    expected_matcher = meta.get("matcher")
+                    if expected_matcher and group.get("matcher") != expected_matcher:
+                        failures.append(f"codex hook matcher invalid: {event}")
+                    handlers = group.get("hooks")
+                    if not isinstance(handlers, list) or not handlers:
+                        failures.append(f"codex hook handlers missing: {event}")
+                        continue
+                    for handler in handlers:
+                        if not isinstance(handler, dict):
+                            failures.append(f"codex hook handler invalid: {event}")
+                            continue
+                        if handler.get("type") != "command" or not handler.get("command"):
+                            failures.append(f"codex command hook invalid: {event}")
+
+    for role in iter_roles(root):
+        agent_path = codex_gen / "agents" / f"{role['adapterName']}.toml"
+        if not agent_path.is_file():
+            failures.append(f"codex agent missing: {role['adapterName']}")
+            continue
+        try:
+            agent = parse_toml(agent_path)
+        except Exception:
+            continue
+        for field in ("name", "description", "developer_instructions"):
+            if not isinstance(agent.get(field), str) or not agent[field].strip():
+                failures.append(f"codex agent missing {field}: {role['adapterName']}")
+        if role.get("readOnly") and agent.get("sandbox_mode") != "read-only":
+            failures.append(f"readonly codex agent lacks sandbox: {role['adapterName']}")
+
 
 def validate_disabled_harness_activation(root: Path, routing: dict[str, Any], failures: list[str]) -> None:
     for harness in HARNESS_NAMES:
         if harness_enabled(routing, harness):
             continue
-        for entry in _planned_symlinks(root, routing):
-            if entry.get("harness") != harness:
-                continue
+        for entry in _planned_symlinks_when_enabled(root, routing, harness):
             link = Path(entry["path"])
             target = Path(entry["source"])
             if link.is_symlink() and symlink_ok(link, target):
@@ -408,6 +475,25 @@ def validate_installed_cursor_activation(
         warnings.append(
             "legacy cursor plugin symlink still present; re-run install --apply to migrate"
         )
+
+
+def validate_installed_codex_activation(
+    root: Path,
+    routing: dict[str, Any],
+    failures: list[str],
+) -> None:
+    if not harness_enabled(routing, "codex"):
+        return
+    for entry in _planned_symlinks(root, routing):
+        if entry.get("harness") != "codex":
+            continue
+        link = Path(entry["path"])
+        target = Path(entry["source"])
+        if not link.is_symlink():
+            failures.append(f"codex activation missing: {link}")
+            continue
+        if not symlink_ok(link, target):
+            failures.append(f"codex activation drift: {link}")
 
 
 def validate_installed_claude_settings(root: Path, failures: list[str]) -> None:
@@ -511,6 +597,36 @@ def validate_harness_availability(routing: dict[str, Any], warnings: list[str]) 
             warnings.append(f"harness version check failed: {name}")
 
 
+def validate_codex_features(
+    routing: dict[str, Any],
+    failures: list[str],
+    warnings: list[str],
+) -> None:
+    if not harness_enabled(routing, "codex"):
+        return
+    cli = shutil.which("codex")
+    if not cli:
+        return
+    try:
+        proc = subprocess.run(
+            [cli, "features", "list"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except subprocess.TimeoutExpired:
+        warnings.append("codex feature check timed out")
+        return
+    if proc.returncode != 0:
+        warnings.append("codex feature check failed")
+        return
+    features = parse_codex_features_output(proc.stdout)
+    for feature in ("hooks", "multi_agent", "skill_search"):
+        if not features.get(feature, False):
+            failures.append(f"codex required feature unavailable: {feature}")
+
+
 def validate_cursor_safety(warnings: list[str]) -> None:
     cfg_path = home_dir() / ".cursor" / "cli-config.json"
     if not cfg_path.is_file():
@@ -605,9 +721,11 @@ def main() -> int:
     validate_generated_artifacts(root, failures)
     validate_disabled_harness_activation(root, routing, failures)
     validate_installed_cursor_activation(root, routing, failures, warnings)
+    validate_installed_codex_activation(root, routing, failures)
     validate_installed_claude_settings(root, failures)
     validate_installed_links(root, warnings)
     validate_harness_availability(routing, warnings)
+    validate_codex_features(routing, failures, warnings)
     validate_cursor_safety(warnings)
     validate_authored_secrets(root, failures)
     validate_hook_guarantees(warnings)

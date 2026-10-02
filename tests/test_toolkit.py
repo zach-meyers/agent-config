@@ -55,12 +55,28 @@ def copy_toolkit_fixture(source: Path, destination: Path) -> None:
                 and name == "generated"
             ):
                 ignored.add(name)
+            if parts == ("routing",) and name == "routing.local.json":
+                ignored.add(name)
         return ignored
 
     if destination.exists():
         shutil.rmtree(destination)
     shutil.copytree(source, destination, ignore=ignore)
     (destination / "local").mkdir(exist_ok=True)
+
+
+def write_test_routing(agents_root: Path) -> None:
+    routing_path = agents_root / "routing" / "routing.example.json"
+    routing = json.loads(routing_path.read_text(encoding="utf-8"))
+    for harness_name in ("cursor", "claude", "codex"):
+        harness = routing["harnesses"][harness_name]
+        harness["enabled"] = True
+        for role in harness["roles"].values():
+            role["model"] = "inherit"
+    (agents_root / "routing" / "routing.local.json").write_text(
+        json.dumps(routing, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 def run_script(
@@ -117,6 +133,13 @@ CURSOR_TOOLKIT_AGENT_FILES = (
     "toolkit-reviewer.md",
 )
 
+CODEX_TOOLKIT_AGENT_FILES = (
+    "toolkit-architect.toml",
+    "toolkit-researcher.toml",
+    "toolkit-implementer.toml",
+    "toolkit-reviewer.toml",
+)
+
 
 def assert_cursor_direct_activation(home: Path, agents_root: Path) -> None:
     cursor_gen = agents_root / "adapters" / "cursor" / "generated"
@@ -136,6 +159,23 @@ def assert_cursor_direct_activation(home: Path, agents_root: Path) -> None:
 def assert_no_cursor_plugin_symlink(home: Path) -> None:
     plugin = home / ".cursor" / "plugins" / "local" / "agent-config"
     assert not plugin.exists()
+
+
+def assert_codex_activation(home: Path, agents_root: Path) -> None:
+    codex_gen = agents_root / "adapters" / "codex" / "generated"
+    expected_links = {
+        home / ".codex" / "AGENTS.md": codex_gen / "AGENTS.md",
+        home / ".codex" / "hooks.json": codex_gen / "hooks.json",
+    }
+    expected_links.update(
+        {
+            home / ".codex" / "agents" / name: codex_gen / "agents" / name
+            for name in CODEX_TOOLKIT_AGENT_FILES
+        }
+    )
+    for link, target in expected_links.items():
+        assert link.is_symlink(), link
+        assert link.resolve() == target.resolve(), link
 
 
 def assert_real_local_sentinel_unchanged(
@@ -163,6 +203,7 @@ class ToolkitFixtureTestCase(unittest.TestCase):
         cls._fixture_holder = tempfile.TemporaryDirectory()
         cls.agents_root = Path(cls._fixture_holder.name)
         copy_toolkit_fixture(REPO_ROOT, cls.agents_root)
+        write_test_routing(cls.agents_root)
         render_proc = subprocess.run(
             [sys.executable, str(SCRIPTS / "render.py")],
             cwd=SCRIPTS,
@@ -246,7 +287,11 @@ class InstallTests(ToolkitFixtureTestCase):
     def setUp(self) -> None:
         self.temp_home = tempfile.TemporaryDirectory()
         self.home = Path(self.temp_home.name)
-        self.env = {"HOME": str(self.home), "AGENTS_ROOT": str(self.agents_root)}
+        self.env = {
+            "HOME": str(self.home),
+            "AGENTS_ROOT": str(self.agents_root),
+            "PATH": str(self.home),
+        }
 
     def tearDown(self) -> None:
         self.temp_home.cleanup()
@@ -282,10 +327,14 @@ class InstallTests(ToolkitFixtureTestCase):
         assert_cursor_direct_activation(self.home, self.agents_root)
         assert_no_cursor_plugin_symlink(self.home)
 
-    def test_disabled_harness_links_absent(self) -> None:
+    def test_codex_direct_activation(self) -> None:
         proc = self.run_in_fixture("install.py", "--apply", env=self.env)
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertFalse((self.home / ".codex" / "AGENTS.md").exists())
+        assert_codex_activation(self.home, self.agents_root)
+
+    def test_disabled_copilot_links_absent(self) -> None:
+        proc = self.run_in_fixture("install.py", "--apply", env=self.env)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertFalse((self.home / ".copilot" / "copilot-instructions.md").exists())
 
     def test_collision_preflight_creates_zero_links(self) -> None:
@@ -455,6 +504,16 @@ class InstallTests(ToolkitFixtureTestCase):
         self.assertFalse((self.home / ".cursor" / "rules" / "agent-config.mdc").exists())
         for name in CURSOR_TOOLKIT_AGENT_FILES:
             self.assertFalse((self.home / ".cursor" / "agents" / name).exists())
+
+    def test_uninstall_removes_codex_paths(self) -> None:
+        self.run_in_fixture("install.py", "--apply", env=self.env)
+        assert_codex_activation(self.home, self.agents_root)
+        uninstall = self.run_in_fixture("install.py", "--uninstall", env=self.env)
+        self.assertEqual(uninstall.returncode, 0, uninstall.stderr)
+        self.assertFalse((self.home / ".codex" / "AGENTS.md").exists())
+        self.assertFalse((self.home / ".codex" / "hooks.json").exists())
+        for name in CODEX_TOOLKIT_AGENT_FILES:
+            self.assertFalse((self.home / ".codex" / "agents" / name).exists())
 
     def test_cursor_agent_copy_records_hashes_in_state(self) -> None:
         proc = self.run_in_fixture("install.py", "--apply", env=self.env)
@@ -747,20 +806,40 @@ class ModelValidationTests(unittest.TestCase):
             if str(SCRIPTS) in sys.path:
                 sys.path.remove(str(SCRIPTS))
 
+    def test_parse_codex_features_output(self) -> None:
+        sys.path.insert(0, str(SCRIPTS))
+        try:
+            from _toolkit import parse_codex_features_output
+
+            features = parse_codex_features_output(
+                "hooks stable true\nmulti_agent stable true\nmemories stable false\n"
+            )
+            self.assertTrue(features["hooks"])
+            self.assertTrue(features["multi_agent"])
+            self.assertFalse(features["memories"])
+        finally:
+            if str(SCRIPTS) in sys.path:
+                sys.path.remove(str(SCRIPTS))
+
 
 class DoctorTests(ToolkitFixtureTestCase):
     def setUp(self) -> None:
         self.temp_home = tempfile.TemporaryDirectory()
         self.home = Path(self.temp_home.name)
-        self.env = {"HOME": str(self.home), "AGENTS_ROOT": str(self.agents_root)}
+        self.env = {
+            "HOME": str(self.home),
+            "AGENTS_ROOT": str(self.agents_root),
+            "PATH": str(self.home),
+        }
 
     def tearDown(self) -> None:
         self.temp_home.cleanup()
 
-    def test_doctor_ok_after_render(self) -> None:
+    def test_doctor_ok_after_install(self) -> None:
         if tomllib is None:
             self.skipTest("tomllib requires Python 3.11+")
-        self.run_in_fixture("render.py")
+        install = self.run_in_fixture("install.py", "--apply", env=self.env)
+        self.assertEqual(install.returncode, 0, install.stderr)
         proc = self.run_in_fixture("doctor.py", "--json", env=self.env)
         data = json.loads(proc.stdout)
         self.assertTrue(data["ok"], data.get("failures"))
@@ -794,6 +873,94 @@ class DoctorTests(ToolkitFixtureTestCase):
             any("cursor activation missing" in item for item in data["failures"]),
             data.get("failures"),
         )
+
+    def test_doctor_fails_when_codex_activation_missing(self) -> None:
+        if tomllib is None:
+            self.skipTest("tomllib requires Python 3.11+")
+        install = self.run_in_fixture("install.py", "--apply", env=self.env)
+        self.assertEqual(install.returncode, 0, install.stderr)
+        (self.home / ".codex" / "hooks.json").unlink()
+        proc = self.run_in_fixture("doctor.py", "--json", env=self.env)
+        data = json.loads(proc.stdout)
+        self.assertFalse(data["ok"])
+        self.assertTrue(
+            any("codex activation missing" in item for item in data["failures"]),
+            data.get("failures"),
+        )
+
+    def test_doctor_fails_when_disabled_codex_link_remains(self) -> None:
+        if tomllib is None:
+            self.skipTest("tomllib requires Python 3.11+")
+        install = self.run_in_fixture("install.py", "--apply", env=self.env)
+        self.assertEqual(install.returncode, 0, install.stderr)
+        routing_path = self.agents_root / "routing" / "routing.local.json"
+        original_routing = routing_path.read_text(encoding="utf-8")
+        try:
+            routing = json.loads(original_routing)
+            routing["harnesses"]["codex"]["enabled"] = False
+            routing_path.write_text(json.dumps(routing), encoding="utf-8")
+            proc = self.run_in_fixture("doctor.py", "--json", env=self.env)
+            data = json.loads(proc.stdout)
+            self.assertFalse(data["ok"])
+            self.assertTrue(
+                any(
+                    "disabled harness has active link: codex" in item
+                    for item in data["failures"]
+                ),
+                data.get("failures"),
+            )
+        finally:
+            routing_path.write_text(original_routing, encoding="utf-8")
+
+    def test_doctor_fails_when_codex_hook_schema_is_invalid(self) -> None:
+        if tomllib is None:
+            self.skipTest("tomllib requires Python 3.11+")
+        self.run_in_fixture("render.py")
+        hooks_path = self.agents_root / "adapters" / "codex" / "generated" / "hooks.json"
+        original_hooks = hooks_path.read_text(encoding="utf-8")
+        try:
+            hooks = json.loads(original_hooks)
+            hooks["hooks"]["SessionStart"] = [{"command": "invalid legacy shape"}]
+            hooks_path.write_text(json.dumps(hooks), encoding="utf-8")
+
+            proc = self.run_in_fixture("doctor.py", "--json", env=self.env)
+
+            data = json.loads(proc.stdout)
+            self.assertFalse(data["ok"])
+            self.assertTrue(
+                any(
+                    "codex hook handlers missing: SessionStart" in item
+                    for item in data["failures"]
+                ),
+                data.get("failures"),
+            )
+        finally:
+            hooks_path.write_text(original_hooks, encoding="utf-8")
+
+    def test_doctor_fails_when_codex_required_feature_is_disabled(self) -> None:
+        codex = self.home / "codex"
+        codex.write_text(
+            f"""#!{sys.executable}
+import sys
+
+if sys.argv[1:] == ["features", "list"]:
+    print("hooks stable false")
+    print("multi_agent stable true")
+    print("skill_search stable true")
+elif sys.argv[1:] == ["--version"]:
+    print("codex-cli test")
+""",
+            encoding="utf-8",
+        )
+        codex.chmod(0o755)
+        install = self.run_in_fixture("install.py", "--apply", env=self.env)
+        self.assertEqual(install.returncode, 0, install.stderr)
+
+        proc = self.run_in_fixture("doctor.py", "--json", env=self.env)
+
+        data = json.loads(proc.stdout)
+        self.assertFalse(data["ok"])
+        self.assertIn("codex required feature unavailable: hooks", data["failures"])
 
     def test_doctor_fails_when_installed_claude_hook_missing(self) -> None:
         if tomllib is None:

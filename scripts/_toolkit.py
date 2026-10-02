@@ -182,6 +182,16 @@ def parse_toml(path: Path) -> dict[str, Any]:
     return tomllib.loads(body)
 
 
+def parse_codex_features_output(output: str) -> dict[str, bool]:
+    features: dict[str, bool] = {}
+    for line in output.splitlines():
+        columns = line.split()
+        if len(columns) < 3 or columns[-1] not in {"true", "false"}:
+            continue
+        features[columns[0]] = columns[-1] == "true"
+    return features
+
+
 def write_text_atomic(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
