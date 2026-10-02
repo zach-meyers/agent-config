@@ -7,6 +7,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from _toolkit import (
     CLAUDE_READONLY_TOOLS,
@@ -49,14 +50,21 @@ def _claude_hook_fragment() -> dict[str, list[dict]]:
     return hooks
 
 
-def _codex_hook_entries() -> dict[str, list[dict[str, str | dict[str, str]]]]:
-    hooks: dict[str, list[dict[str, str | dict[str, str]]]] = {}
+def _codex_hook_entries() -> dict[str, list[dict[str, Any]]]:
+    hooks: dict[str, list[dict[str, Any]]] = {}
     for event, meta in HOOK_EVENTS["codex"].items():
-        item: dict[str, str | dict[str, str]] = {"command": hook_command("codex", event)}
+        group: dict[str, Any] = {
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": hook_command("codex", event),
+                }
+            ]
+        }
         matcher = meta.get("matcher")
         if matcher:
-            item["matcher"] = matcher
-        hooks[event] = [item]
+            group["matcher"] = matcher
+        hooks[event] = [group]
     return hooks
 
 

@@ -162,10 +162,30 @@ def cmd_hook(args: argparse.Namespace) -> int:
         if not message:
             print("{}")
             return 0
-        if event in {"PreCompact", "Stop"} and needs_action and can_block:
+        if event == "PreCompact" and needs_action and can_block:
+            print(
+                json.dumps(
+                    {
+                        "continue": False,
+                        "stopReason": message,
+                        "systemMessage": message,
+                    }
+                )
+            )
+            return 0
+        if event == "Stop" and needs_action and can_block:
             print(json.dumps({"decision": "block", "reason": message}))
             return 0
-        print(json.dumps({"additionalContext": message}))
+        print(
+            json.dumps(
+                {
+                    "hookSpecificOutput": {
+                        "hookEventName": event,
+                        "additionalContext": message,
+                    }
+                }
+            )
+        )
         return 0
 
     if harness == "copilot":

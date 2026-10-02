@@ -213,6 +213,24 @@ class RenderTests(ToolkitFixtureTestCase):
             self.agents_root / "adapters/cursor/generated/agents/toolkit-researcher.md"
         )
 
+    def test_codex_hooks_use_matcher_groups_and_command_handlers(self) -> None:
+        self.run_in_fixture("render.py")
+        hooks = parse_generated_json(
+            "adapters/codex/generated/hooks.json",
+            self.agents_root,
+        )["hooks"]
+
+        for event, groups in hooks.items():
+            self.assertIsInstance(groups, list, event)
+            self.assertTrue(groups, event)
+            for group in groups:
+                self.assertIn("hooks", group, event)
+                for handler in group["hooks"]:
+                    self.assertEqual(handler.get("type"), "command", event)
+                    self.assertTrue(handler.get("command"), event)
+
+        self.assertEqual(hooks["PostToolUse"][0].get("matcher"), "Edit|Write")
+
     @unittest.skipIf(tomllib is None, "tomllib requires Python 3.11+")
     def test_generated_toml_parses(self) -> None:
         self.run_in_fixture("render.py")
@@ -643,6 +661,65 @@ class ContinuityTests(unittest.TestCase):
             check=False,
         )
         self.assertNotIn(secret, proc.stdout + proc.stderr)
+
+    def test_codex_session_start_adds_developer_context(self) -> None:
+        task_id = "task-codex-start"
+        task_dir = self.root / ".agents" / "tasks" / task_id
+        task_dir.mkdir(parents=True)
+        (self.root / ".agents" / "active-task").write_text(task_id, encoding="utf-8")
+
+        proc = self._run_codex_hook("SessionStart")
+
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        output = payload["hookSpecificOutput"]
+        self.assertEqual(output["hookEventName"], "SessionStart")
+        self.assertIn(task_id, output["additionalContext"])
+
+    def test_codex_precompact_stops_for_missing_checkpoint(self) -> None:
+        task_id = "task-codex-compact"
+        task_dir = self.root / ".agents" / "tasks" / task_id
+        task_dir.mkdir(parents=True)
+        (self.root / ".agents" / "active-task").write_text(task_id, encoding="utf-8")
+
+        proc = self._run_codex_hook("PreCompact")
+
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertFalse(payload["continue"])
+        self.assertIn(task_id, payload["stopReason"])
+        self.assertEqual(payload["systemMessage"], payload["stopReason"])
+
+    def test_codex_stop_continues_for_missing_checkpoint(self) -> None:
+        task_id = "task-codex-stop"
+        task_dir = self.root / ".agents" / "tasks" / task_id
+        task_dir.mkdir(parents=True)
+        (self.root / ".agents" / "active-task").write_text(task_id, encoding="utf-8")
+
+        proc = self._run_codex_hook("Stop")
+
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertEqual(payload["decision"], "block")
+        self.assertIn(task_id, payload["reason"])
+
+    def _run_codex_hook(self, event: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPTS / "continuity.py"),
+                "hook",
+                "--harness",
+                "codex",
+                "--event",
+                event,
+            ],
+            cwd=self.root,
+            env={**os.environ, "AGENTS_ROOT": str(REPO_ROOT)},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
 
 
 class ModelValidationTests(unittest.TestCase):
