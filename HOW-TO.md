@@ -54,10 +54,20 @@ Run `render.py` before `--dry-run` or whenever sources or routing change. `--dry
 | ------- | ------- | ------- | ------------- |
 | **Cursor** | Set `enabled: true` in `routing.local.json` after real model IDs | Symlinks: `~/.cursor/rules/agent-config.mdc`, `~/.cursor/hooks.json`. Managed **copies**: `~/.cursor/agents/toolkit-*.md` | Operating contract + **native** `~/.agents/skills` verified. Role files on disk; **not** listed as custom Task subagent types in current CLI—orchestrate with built-in worker types + brief (below). |
 | **Claude** | Set `enabled: true` in `routing.local.json` after aliases/IDs | Symlinks: `~/.claude/CLAUDE.md`, `~/.claude/skills/*`, `~/.claude/agents/toolkit-*.md`; hooks merged into `settings.json` | `claude doctor` reports no install issues; **not** live model-smoke verified until `claude auth login`. |
-| **Codex** | `enabled: false` | Not linked when disabled | Adapters under `adapters/codex/generated/`; doctor warns `harness disabled: codex` (CLI absent). |
+| **Codex** | Set `enabled: true`; start each role with `model: "inherit"` | Symlinks: `~/.codex/AGENTS.md`, `~/.codex/hooks.json`, `~/.codex/agents/toolkit-*.toml` | Skills load natively from `~/.agents/skills`. After install, use `/hooks`, `/skills`, and `/agent` to verify and trust the installed components. |
 | **Copilot** | `enabled: false` | Not linked when disabled | Adapters under `adapters/copilot/generated/`; doctor warns `harness disabled: copilot`. |
 
 Disabled harnesses must not have active install links; doctor fails if they do.
+
+### Codex activation
+
+1. In `routing/routing.local.json`, set `harnesses.codex.enabled` to `true`.
+2. Set each Codex role model to `inherit` for the first activation. Use `/model` later to select and verify account-available model IDs before you pin them.
+3. Run `render.py`, `install.py --dry-run`, `install.py --apply`, `doctor.py`, and the unit tests.
+4. Run `codex doctor`. If it reports missing credentials, run `codex login`.
+5. Start a new Codex session. Codex loads `AGENTS.md` once when the session starts.
+6. Run `/hooks` and trust the toolkit hooks, then confirm the personal skills with `/skills` and the four custom roles with `/agent`.
+7. Ask: `Without reading files or using tools, summarize my request modes, delegation rules, and artifact locations.`
 
 ## Directory model
 
@@ -85,7 +95,8 @@ Trigger for nontrivial work: [orchestrate-work](./skills/orchestrate-work/SKILL.
 3. Map work to a role (`researcher` / `implementer` / `architect` / `reviewer`) and tier in `routing.local.json`.
 4. **Cursor gap:** inspect the Task types currently exposed, then use the fallback in `roles/manifest.json`: `architect → deep-reasoner`, `researcher → explore`, `implementer → fast-worker`, `reviewer → deep-reasoner`. Paste the matching portable prompt from `roles/prompts/<role>.md` and a filled [worker-brief-template.md](./skills/orchestrate-work/worker-brief-template.md). Use `security-review` only when the user explicitly requests that review.
 5. **Claude:** use `~/.claude/agents/toolkit-*.md` symlinks when the product exposes them; same brief either way.
-6. Synthesize worker returns; replay checks; only the lead declares done/blocked.
+6. **Codex:** use `/agent` to inspect or select the `toolkit-*` roles. The generated TOML files enforce read-only sandboxing for researcher and reviewer.
+7. Synthesize worker returns; replay checks; only the lead declares done/blocked.
 
 **Worker brief sections (required):** Outcome; Context; Scope and ownership; Instructions and skills; Tools and mutation boundary; Commands and sources; Verification required; Return schema; Trust boundary; Stop and escalate.
 
@@ -135,7 +146,8 @@ Hooks call `continuity.py hook --harness <name> --event <Event>`; they detect st
 2. Replace placeholder IDs with harness-specific values for each role you use. Set `enabled: true` only for harnesses you intend to activate.
 3. **Claude** mappings in this toolkit accept stable aliases: `inherit`, `haiku`, `sonnet`, `opus` (doctor rejects unknown aliases when Claude is enabled).
 4. **Cursor** mappings use concrete model IDs from `cursor-agent --list-models` (or `cursor --list-models`); doctor fails if an enabled role references an ID not returned by that command when the CLI is available.
-5. `render.py`, then `install.py --apply`; `doctor.py` fails on placeholder IDs for **enabled** harnesses and on invalid/unavailable models—**no silent substitution**.
+5. **Codex** mappings should use `inherit` until you verify account-available models with `/model`. After you pin a model, smoke-test that role through `/agent`; Codex does not expose a noninteractive model-list command for doctor.
+6. `render.py`, then `install.py --apply`; `doctor.py` fails on placeholder IDs for **enabled** harnesses and on invalid/unavailable models where the harness exposes machine-readable discovery—**no silent substitution**.
 
 Edit portable text in `roles/prompts/`, not model IDs in role files.
 
@@ -166,6 +178,10 @@ Local-only skills: record in lock only if you add a local provenance convention;
 | Cursor skills missing | Skills live in `~/.agents/skills` (Cursor native path); confirm directory and skill frontmatter |
 | Cursor `toolkit-*` not in Task menu | Known limitation—use worker types + `roles/prompts/*.md` + worker brief |
 | Claude auth / policy | `claude auth login`; `claude doctor` (install only, not model smoke) |
+| Codex auth missing | Run `codex doctor`, then `codex login` |
+| Codex contract missing | Confirm `~/.codex/AGENTS.md` is a toolkit symlink, then restart Codex |
+| Codex hooks inactive | Run `/hooks`, inspect the source, and trust the toolkit hooks |
+| Codex role missing | Run `doctor.py`, restart Codex, then inspect `/agent` |
 | Stale checkpoint | `continuity.py check`; compare `HANDOFF.md` to git; run `handoff-resume` checkpoint |
 | Disabled harness still linked | Set `enabled: false`; `install.py --uninstall`; `doctor.py` |
 | Rollback toolkit install | `install.py --uninstall` (removes **managed** symlinks/hooks only—review dry-run first) |
