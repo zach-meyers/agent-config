@@ -360,6 +360,10 @@ def validate_codex_generated_artifacts(root: Path, failures: list[str]) -> None:
             hook_document = load_json(hooks_path)
         except (json.JSONDecodeError, ValueError):
             hook_document = {}
+        if isinstance(hook_document, dict):
+            unsupported_fields = set(hook_document) - {"description", "hooks"}
+            for field in sorted(unsupported_fields):
+                failures.append(f"codex hooks.json unsupported field: {field}")
         hooks = hook_document.get("hooks", {}) if isinstance(hook_document, dict) else {}
         if not isinstance(hooks, dict):
             failures.append("codex hooks.json hooks must be an object")

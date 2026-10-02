@@ -259,7 +259,9 @@ class RenderTests(ToolkitFixtureTestCase):
         hooks = parse_generated_json(
             "adapters/codex/generated/hooks.json",
             self.agents_root,
-        )["hooks"]
+        )
+        self.assertEqual(set(hooks), {"hooks"})
+        hooks = hooks["hooks"]
 
         for event, groups in hooks.items():
             self.assertIsInstance(groups, list, event)
@@ -920,6 +922,7 @@ class DoctorTests(ToolkitFixtureTestCase):
         original_hooks = hooks_path.read_text(encoding="utf-8")
         try:
             hooks = json.loads(original_hooks)
+            hooks["version"] = 1
             hooks["hooks"]["SessionStart"] = [{"command": "invalid legacy shape"}]
             hooks_path.write_text(json.dumps(hooks), encoding="utf-8")
 
@@ -933,6 +936,10 @@ class DoctorTests(ToolkitFixtureTestCase):
                     for item in data["failures"]
                 ),
                 data.get("failures"),
+            )
+            self.assertIn(
+                "codex hooks.json unsupported field: version",
+                data["failures"],
             )
         finally:
             hooks_path.write_text(original_hooks, encoding="utf-8")

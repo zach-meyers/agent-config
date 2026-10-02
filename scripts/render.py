@@ -200,7 +200,7 @@ def render_codex(root: Path, routing: dict) -> list[str]:
         sources.append(str(toml_path.relative_to(root)))
 
     hooks_path = out / "hooks.json"
-    write_json_atomic(hooks_path, {"version": 1, "hooks": _codex_hook_entries()})
+    write_json_atomic(hooks_path, {"hooks": _codex_hook_entries()})
     sources.append(str(hooks_path.relative_to(root)))
 
     return sources
