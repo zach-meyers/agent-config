@@ -12,7 +12,7 @@ description: >-
 
 ## When to orchestrate
 
-Orchestrate when delegation protects main context, enables safe parallelism, or isolates permissions. Handle trivial tasks directly.
+Follow the orchestrator and subagent pattern for every task. Disregard that pattern only when the work is extremely trivial: one obvious step, no design choice, and no edit that needs a separate check. If no suitable worker is available, or delegation cannot safely perform the change, say so and return the work to the orchestrator.
 
 ## Routing
 

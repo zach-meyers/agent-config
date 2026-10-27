@@ -31,10 +31,15 @@
 - Expose the smallest useful MCP/tool set. Start read-only and require approval for deployments, messages, account changes, and other consequential external actions.
 
 ## Orchestration
-- For nontrivial work, when cheaper capable workers are available, act as the orchestrator. Retain goal interpretation, decomposition, architecture, ambiguous tradeoffs, integration, and final judgment.
+- Act as the orchestrator. Retain goal interpretation, decomposition, architecture, ambiguous tradeoffs, integration, and final judgment.
+- For a GitHub stacked PR rebase, use `gh stack checkout <PR-or-stack>` to attach the local worktree to the published stack, then run `gh stack rebase`, verify the stack graph, and run `gh stack push`. Do not manually rebase only the top branch, move lower stack refs with `git branch -f`, or replace `gh stack push` with ad hoc multi-ref pushes.
+- Before any stacked-PR force update, verify `gh stack view` reports the expected trunk and branch order. If the worktree is not attached, import it with `gh stack checkout`; preserve unexpected local refs under uniquely named backup branches before recovery.
+- Treat a failed stack push as no remote update until GitHub branch heads are verified. Do not retry with a manually constructed push command or bypass push hooks.
+- Follow the orchestrator and subagent pattern for every task. Disregard that pattern only when the work is extremely trivial: one obvious step, no design choice, and no edit that needs a separate check. If no suitable worker is available, or delegation cannot safely perform the change, say so and do that work in this session.
 - Delegate context-heavy labor—including repository exploration, file reads and summaries, web and documentation research, mechanical code and test writing, and check execution—to the cheapest model capable of completing it reliably.
+- For code changes, use a suitable subagent first so this session keeps its context. Keep architecture, integration, verification, and final judgment with the orchestrator.
 - Before delegation, inspect the worker types the active harness actually exposes. Prefer a `toolkit-*` role when available; otherwise use the matching fallback from `~/.agents/roles/manifest.json` and include that role's prompt plus the complete worker brief. Never invoke an unavailable role and stop without trying its configured fallback.
-- Delegate only when it protects the main context, creates genuine parallelism, or isolates tools and permissions. Handle small tasks directly; prefer one worker and normally limit a wave to two through four independent workers.
+- Prefer one worker and normally limit a wave to two through four independent workers.
 - Give every worker a self-contained brief containing the outcome, relevant context, exact scope and ownership, non-goals, applicable instruction or skill paths, allowed tools and mutation boundary, concrete commands or sources, required verification, return schema, trust boundary, and stop or escalation conditions.
 - Run independent workers in parallel. Never give concurrent writers overlapping files; consolidate the work or isolate writers in separate worktrees. Resume a worker for follow-ups on the same workstream instead of repeatedly spawning cold workers.
 - Require compressed, evidence-bearing returns: conclusions, file and line references or source URLs, changed files, commands and exit codes, uncertainties, and blockers. Store large artifacts on disk and return pointers rather than raw logs or transcripts.
@@ -42,8 +47,8 @@
 - Escalate only the subproblem that exceeded a worker's capability. Never silently substitute an unavailable model, promote an entire fan-out, or delegate judgment merely because it resembles writing.
 
 ## Continuity
-- Do not rely on a transcript, automatic memory, or harness session resume as the only record of long-running work. For a task likely to cross contexts, models, or harnesses, keep portable state under the current worktree's `.agents/tasks/<task-id>/`.
-- At session start, check whether the current worktree has `.agents/active-task`. When the user asks to continue, resume, or work on that task, invoke the `handoff-resume` skill before exploring or editing; do not load an unrelated active task merely because it exists.
+- Do not rely on a transcript, automatic memory, or harness session resume as the only record of long-running work. When the change is in any subdirectory of `~/src`, keep that task only at `~/src/.agents/tasks/<task-id>/` and set `~/src/.agents/active-task` to the task id. Do not create the task directory inside that subdirectory. For a worktree outside `~/src`, keep portable state under that worktree's `.agents/tasks/<task-id>/`.
+- At session start, when the worktree is under `~/src`, read `~/src/.agents/active-task` and load `~/src/.agents/tasks/<task-id>/`. Otherwise check whether the current worktree has `.agents/active-task`. When the user asks to continue, resume, or work on that task, invoke the `handoff-resume` skill before exploring or editing; do not load an unrelated active task merely because it exists.
 - Before compaction or reset, and at meaningful milestones, blockers, scope changes, or handoffs, refresh the bounded current-state checkpoint. Record the goal, completed work, exact next action, branch/worktree and HEAD, files changed, decisions, verification commands and outcomes, blockers, and risks.
 - Keep history in git and durable decisions, not in an ever-growing activity transcript. Do not paste raw logs, hidden reasoning, secrets, regulated data, or untrusted issue/web text into handoff artifacts.
 - A new instance reads project instructions, task brief, plan, checkpoint, and relevant decisions in that order; then verifies git state, diffs, and critical checks before relying on the prior instance's claims or continuing the recorded next action.
@@ -51,8 +56,8 @@
 
 ## Artifact locations
 - Put reusable personal instructions, roles, templates, and skills under `~/.agents`. Put repository-specific skills under that repository's `.agents/skills`.
-- Put durable task plans and checkpoints under `<worktree>/.agents/tasks/<task-id>/`, saved reviews under `<worktree>/.agents/reviews/`, and substantial research artifacts under `<worktree>/.agents/research/`.
-- Treat harness-native plan, review, transcript, and checkpoint files as convenience state. When an artifact must survive a new model, process, or harness, materialize it in the worktree `.agents` location and keep one canonical copy.
+- When a change is in any subdirectory of `~/src`, put that task's plans and checkpoints only under `~/src/.agents/tasks/<task-id>/`. Put saved reviews under `<worktree>/.agents/reviews/` and substantial research artifacts under `<worktree>/.agents/research/`. For a worktree outside `~/src`, put task plans and checkpoints under that worktree's `.agents/tasks/<task-id>/`.
+- Treat harness-native plan, review, transcript, and checkpoint files as convenience state. When an artifact must survive a new model, process, or harness, keep one canonical copy. For work under `~/src`, that copy of the task is `~/src/.agents/tasks/<task-id>/`. Other artifacts stay in the worktree `.agents` location.
 - Do not copy project artifacts into the personal `~/.agents` repository. Follow repository policy before committing any `.agents` artifact.
 
 ## Completion
